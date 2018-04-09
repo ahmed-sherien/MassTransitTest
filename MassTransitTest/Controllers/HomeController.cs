@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using MassTransitTest.Messaging;
 using MassTransitTest.Models;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace MassTransitTest.Controllers
 {
@@ -13,6 +12,30 @@ namespace MassTransitTest.Controllers
         public IActionResult Index()
         {
             return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Index(OrderViewModel model)
+        {
+            var bus = BusConfigurator.ConfigureBus();
+
+            var sendToUri = new Uri($"{RabbitMQConstants.RabbitMqUri}{RabbitMQConstants.SagaQueue}");
+            var endPoint = await bus.GetSendEndpoint(sendToUri);
+
+            await endPoint.Send<IRegisterOrderCommand>(new
+            {
+                model.PickupName,
+                model.PickupAddress,
+                model.PickupCity,
+                model.DeliverName,
+                model.DeliverAddress,
+                model.DeliverCity,
+                model.Weight,
+                model.Fragile,
+                model.Oversized
+            });
+
+            return View("Thanks");
         }
 
         public IActionResult About()
